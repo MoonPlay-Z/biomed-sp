@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TECH
+  CLIENT
+}
+
+enum AppointmentStatus {
+  RECEIVED
+  DIAGNOSING
+  WAITING_PARTS
+  FINISHED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(CLIENT)
+  phone     String?
+  rif       String?
+  
+  // Relations
+  techAppointments   Appointment[] @relation("TechAppointments")
+  clientAppointments Appointment[] @relation("ClientAppointments")
+  messages           Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  status      AppointmentStatus @default(RECEIVED)
+  description String            // description of the issue / falla
+  
+  // Relations
+  techId      String?
+  tech        User?             @relation("TechAppointments", fields: [techId], references: [id])
+  
+  clientId    String
+  client      User              @relation("ClientAppointments", fields: [clientId], references: [id])
+
+  equipment   Equipment?
+  messages    Message[]
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model Equipment {
+  id            String      @id @default(uuid())
+  brand         String      // marca
+  model         String      // modelo
+  serialNumber  String      // serial
+  imageUrls     String[]    // array de URLs para las 3 imágenes obligatorias
+
+  // Relations
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Inventory {
+  id            String   @id @default(uuid())
+  sku           String   @unique
+  name          String
+  quantity      Int      @default(0)
+  lowStockAlert Int      @default(5)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Message {
+  id            String      @id @default(uuid())
+  content       String
+  
+  // Relations
+  senderId      String
+  sender        User        @relation(fields: [senderId], references: [id])
+
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  createdAt     DateTime    @default(now())
+}
