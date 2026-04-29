@@ -12,13 +12,17 @@ export class InventoryService {
   }
 
   findAll() {
-    return this.prisma.inventory.findMany({ orderBy: { nombre_repuesto: 'asc' } });
+    return this.prisma.inventory.findMany({
+      orderBy: { nombre_repuesto: 'asc' },
+    });
   }
 
   // Repuestos con stock bajo
   findLowStock() {
     return this.prisma.inventory.findMany({
-      where: { cantidad: { lte: this.prisma.inventory.fields.cantidad_minima } },
+      where: {
+        cantidad: { lte: this.prisma.inventory.fields.cantidad_minima },
+      },
       orderBy: { cantidad: 'asc' },
     });
   }

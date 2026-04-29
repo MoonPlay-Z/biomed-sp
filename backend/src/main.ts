@@ -15,9 +15,9 @@ async function bootstrap() {
   // Validación global de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,       // Ignora campos extra no declarados en el DTO
+      whitelist: true, // Ignora campos extra no declarados en el DTO
       forbidNonWhitelisted: true,
-      transform: true,       // Convierte automáticamente los tipos (string -> number, etc.)
+      transform: true, // Convierte automáticamente los tipos (string -> number, etc.)
     }),
   );
 
@@ -28,4 +28,4 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 JaMechanic API corriendo en: http://localhost:${port}/api`);
 }
-bootstrap();
+void bootstrap();

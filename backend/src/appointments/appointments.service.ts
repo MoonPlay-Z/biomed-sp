@@ -18,7 +18,11 @@ export class AppointmentsService {
         fecha_cita: new Date(dto.fecha_cita),
         status: dto.status,
       },
-      include: { client: { select: { nombre: true, email: true } }, tech: { select: { nombre: true } }, equipment: true },
+      include: {
+        client: { select: { nombre: true, email: true } },
+        tech: { select: { nombre: true } },
+        equipment: true,
+      },
     });
   }
 
@@ -27,7 +31,7 @@ export class AppointmentsService {
       where: status ? { status } : undefined,
       include: {
         client: { select: { id: true, nombre: true, telefono: true } },
-        tech:   { select: { id: true, nombre: true } },
+        tech: { select: { id: true, nombre: true } },
         equipment: true,
       },
       orderBy: { created_at: 'desc' },
@@ -38,10 +42,15 @@ export class AppointmentsService {
     const apt = await this.prisma.appointments.findUnique({
       where: { id },
       include: {
-        client: { select: { id: true, nombre: true, email: true, telefono: true } },
-        tech:   { select: { id: true, nombre: true } },
+        client: {
+          select: { id: true, nombre: true, email: true, telefono: true },
+        },
+        tech: { select: { id: true, nombre: true } },
         equipment: true,
-        messages: { include: { sender: { select: { nombre: true, role: true } } }, orderBy: { created_at: 'asc' } },
+        messages: {
+          include: { sender: { select: { nombre: true, role: true } } },
+          orderBy: { created_at: 'asc' },
+        },
       },
     });
     if (!apt) throw new NotFoundException(`Cita #${id} no encontrada.`);

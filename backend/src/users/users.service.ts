@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -9,7 +13,9 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateUserDto) {
-    const existing = await this.prisma.users.findUnique({ where: { email: dto.email } });
+    const existing = await this.prisma.users.findUnique({
+      where: { email: dto.email },
+    });
     if (existing) throw new ConflictException('El correo ya está registrado.');
 
     const password_hash = await bcrypt.hash(dto.password, 10);
@@ -22,13 +28,29 @@ export class UsersService {
         telefono: dto.telefono,
         role: dto.role,
       },
-      select: { id: true, nombre: true, email: true, role: true, rif_cedula: true, telefono: true, created_at: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        role: true,
+        rif_cedula: true,
+        telefono: true,
+        created_at: true,
+      },
     });
   }
 
   findAll() {
     return this.prisma.users.findMany({
-      select: { id: true, nombre: true, email: true, role: true, rif_cedula: true, telefono: true, created_at: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        role: true,
+        rif_cedula: true,
+        telefono: true,
+        created_at: true,
+      },
       orderBy: { created_at: 'desc' },
     });
   }
@@ -36,20 +58,36 @@ export class UsersService {
   async findOne(id: number) {
     const user = await this.prisma.users.findUnique({
       where: { id },
-      select: { id: true, nombre: true, email: true, role: true, rif_cedula: true, telefono: true, created_at: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        role: true,
+        rif_cedula: true,
+        telefono: true,
+        created_at: true,
+      },
     });
     if (!user) throw new NotFoundException(`Usuario #${id} no encontrado.`);
     return user;
   }
 
+  async findByEmail(email: string) {
+    return this.prisma.users.findUnique({
+      where: { email },
+    });
+  }
+
   async update(id: number, dto: UpdateUserDto) {
     await this.findOne(id);
-    const data: any = { ...dto };
-    if (dto.password) {
-      data.password_hash = await bcrypt.hash(dto.password, 10);
-      delete data.password;
+    const { password, ...rest } = dto;
+    let data: Record<string, unknown> = { ...rest };
+    if (password) {
+      data = { ...data, password_hash: await bcrypt.hash(password, 10) };
     }
-    return this.prisma.users.update({ where: { id }, data });
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    return this.prisma.users.update({ where: { id }, data: data as any });
   }
 
   async remove(id: number) {

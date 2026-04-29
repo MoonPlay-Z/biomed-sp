@@ -1,9 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { EquipmentService } from './equipment.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('equipment')
+@UseGuards(JwtAuthGuard)
 export class EquipmentController {
   constructor(private readonly equipmentService: EquipmentService) {}
 
@@ -23,7 +34,10 @@ export class EquipmentController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEquipmentDto: UpdateEquipmentDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateEquipmentDto: UpdateEquipmentDto,
+  ) {
     return this.equipmentService.update(+id, updateEquipmentDto);
   }
 

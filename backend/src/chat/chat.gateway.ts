@@ -48,15 +48,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // 3. Unirse a la sala
-    client.join(appointmentId.toString());
+    void client.join(appointmentId.toString());
     console.log(`User ${userId} joined room ${appointmentId}`);
-    
-    client.emit('joinedRoom', { appointmentId, message: 'Successfully joined' });
+
+    client.emit('joinedRoom', {
+      appointmentId,
+      message: 'Successfully joined',
+    });
   }
 
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
-    @MessageBody() payload: { appointmentId: number; senderId: number; content: string },
+    @MessageBody()
+    payload: { appointmentId: number; senderId: number; content: string },
     @ConnectedSocket() client: Socket,
   ) {
     try {
@@ -72,14 +76,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             select: {
               nombre: true,
               role: true,
-            }
-          }
-        }
+            },
+          },
+        },
       });
 
       // 2. Emitir mensaje a la sala específica
-      this.server.to(payload.appointmentId.toString()).emit('newMessage', message);
-      
+      void this.server
+        .to(payload.appointmentId.toString())
+        .emit('newMessage', message);
+
       return { success: true, data: message };
     } catch (error) {
       console.error('Error sending message:', error);

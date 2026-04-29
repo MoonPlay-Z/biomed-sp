@@ -13,7 +13,11 @@ export class EquipmentService {
 
   findAll() {
     return this.prisma.equipments.findMany({
-      include: { appointments: { select: { id: true, status: true, descripcion_falla: true } } },
+      include: {
+        appointments: {
+          select: { id: true, status: true, descripcion_falla: true },
+        },
+      },
       orderBy: { created_at: 'desc' },
     });
   }
@@ -28,8 +32,13 @@ export class EquipmentService {
   }
 
   async findBySerial(serial_number: string) {
-    const equip = await this.prisma.equipments.findUnique({ where: { serial_number } });
-    if (!equip) throw new NotFoundException(`Equipo con serial ${serial_number} no encontrado.`);
+    const equip = await this.prisma.equipments.findUnique({
+      where: { serial_number },
+    });
+    if (!equip)
+      throw new NotFoundException(
+        `Equipo con serial ${serial_number} no encontrado.`,
+      );
     return equip;
   }
 
