@@ -34,7 +34,19 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      
+      // Limpiar formato markdown accidental: [url](url)
+      if (apiUrl.includes('](')) {
+        const match = apiUrl.match(/\((.*?)\)/);
+        if (match) apiUrl = match[1];
+      }
+      // Asegurarse de que termine en /api
+      apiUrl = apiUrl.replace(/\/$/, '');
+      if (!apiUrl.endsWith('/api')) {
+        apiUrl += '/api';
+      }
+
       const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
