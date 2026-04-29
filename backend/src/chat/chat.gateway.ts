@@ -19,8 +19,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
-    // En un entorno real, extraeríamos el token (ej. JWT), validaríamos el usuario
-    // y asignaríamos el cliente a sus rooms según sus citas.
   }
 
   handleDisconnect(client: Socket) {
@@ -29,12 +27,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
-    @MessageBody('appointmentId') appointmentId: string,
-    @MessageBody('userId') userId: string,
+    @MessageBody('appointmentId') appointmentId: number,
+    @MessageBody('userId') userId: number,
     @ConnectedSocket() client: Socket,
   ) {
     // 1. Validar que la cita existe
-    const appointment = await this.prisma.appointment.findUnique({
+    const appointment = await this.prisma.appointments.findUnique({
       where: { id: appointmentId },
     });
 
@@ -44,13 +42,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // 2. Validar que el usuario es el cliente o el técnico asignado
-    if (appointment.clientId !== userId && appointment.techId !== userId) {
+    if (appointment.client_id !== userId && appointment.tech_id !== userId) {
       client.emit('error', 'Unauthorized to join this room');
       return;
     }
 
     // 3. Unirse a la sala
-    client.join(appointmentId);
+    client.join(appointmentId.toString());
     console.log(`User ${userId} joined room ${appointmentId}`);
     
     client.emit('joinedRoom', { appointmentId, message: 'Successfully joined' });
@@ -58,21 +56,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
-    @MessageBody() payload: { appointmentId: string; senderId: string; content: string },
+    @MessageBody() payload: { appointmentId: number; senderId: number; content: string },
     @ConnectedSocket() client: Socket,
   ) {
     try {
       // 1. Guardar mensaje en la base de datos a través de Prisma
-      const message = await this.prisma.message.create({
+      const message = await this.prisma.messages.create({
         data: {
-          content: payload.content,
-          senderId: payload.senderId,
-          appointmentId: payload.appointmentId,
+          mensaje: payload.content,
+          sender_id: payload.senderId,
+          appointment_id: payload.appointmentId,
         },
         include: {
           sender: {
             select: {
-              name: true,
+              nombre: true,
               role: true,
             }
           }
@@ -80,7 +78,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       // 2. Emitir mensaje a la sala específica
-      this.server.to(payload.appointmentId).emit('newMessage', message);
+      this.server.to(payload.appointmentId.toString()).emit('newMessage', message);
       
       return { success: true, data: message };
     } catch (error) {
