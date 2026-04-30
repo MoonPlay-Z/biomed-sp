@@ -19,12 +19,7 @@ export class InventoryService {
 
   // Repuestos con stock bajo
   findLowStock() {
-    return this.prisma.inventory.findMany({
-      where: {
-        cantidad: { lte: this.prisma.inventory.fields.cantidad_minima },
-      },
-      orderBy: { cantidad: 'asc' },
-    });
+    return this.prisma.$queryRaw`SELECT * FROM inventory WHERE cantidad <= cantidad_minima ORDER BY "cantidad" ASC`;
   }
 
   async findOne(id: number) {

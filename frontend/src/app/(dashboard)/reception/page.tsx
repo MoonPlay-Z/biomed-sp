@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Upload, X, Loader2, Save } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const formSchema = z.object({
   // Sección 1: Datos del cliente
@@ -55,16 +56,32 @@ export default function ReceptionPage() {
     }
   };
 
+  const { user, token } = useAuth();
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Datos enviados:', data);
-      alert('Recepción guardada exitosamente.');
-      // Here we would typically route the user or clear the form
-    } catch (error) {
-      console.error(error);
+      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      apiUrl = apiUrl.replace(/\/$/, '');
+      if (!apiUrl.endsWith('/api')) apiUrl += '/api';
+
+      // 1. Enviar datos al backend
+      const res = await fetch(`${apiUrl}/appointments/reception`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!res.ok) throw new Error('Error al guardar la recepción');
+
+      alert('Recepción guardada exitosamente en el servidor.');
+      setImagePreviews([]);
+      setValue('images', {} as FileList);
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

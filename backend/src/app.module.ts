@@ -8,6 +8,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { EquipmentModule } from './equipment/equipment.module';
 import { AuthModule } from './auth/auth.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthModule } from './auth/auth.module';
     InventoryModule,
     EquipmentModule,
     AuthModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

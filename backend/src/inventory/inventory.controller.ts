@@ -31,6 +31,11 @@ export class InventoryController {
   findAll() {
     return this.inventoryService.findAll();
   }
+  
+  @Get('low-stock')
+  findLowStock() {
+    return this.inventoryService.findLowStock();
+  }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
