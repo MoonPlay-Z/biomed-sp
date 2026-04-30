@@ -5,11 +5,16 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Habilitar CORS para el frontend de Next.js
+  // Habilitar CORS para el frontend en producción y local
   app.enableCors({
-    origin: true,
+    origin: [
+      'https://biomed-sp.netlify.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Validación global de DTOs
