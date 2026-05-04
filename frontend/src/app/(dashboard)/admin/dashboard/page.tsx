@@ -24,9 +24,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-        apiUrl = apiUrl.replace(/\/$/, '');
-        if (!apiUrl.endsWith('/api')) apiUrl += '/api';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+
 
         const res = await fetch(`${apiUrl}/dashboard/stats`, {
           headers: {

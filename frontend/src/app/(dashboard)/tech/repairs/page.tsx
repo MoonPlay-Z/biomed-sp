@@ -31,9 +31,8 @@ export default function TechRepairs() {
   useEffect(() => {
     const fetchMyAppointments = async () => {
       try {
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-        apiUrl = apiUrl.replace(/\/$/, '');
-        if (!apiUrl.endsWith('/api')) apiUrl += '/api';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+
 
         const res = await fetch(`${apiUrl}/appointments/my`, {
           headers: {
@@ -56,9 +55,8 @@ export default function TechRepairs() {
 
   const updateStatus = async (id: number, newStatus: AppointmentStatus) => {
     try {
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      apiUrl = apiUrl.replace(/\/$/, '');
-      if (!apiUrl.endsWith('/api')) apiUrl += '/api';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+
 
       const res = await fetch(`${apiUrl}/appointments/${id}`, {
         method: 'PATCH',

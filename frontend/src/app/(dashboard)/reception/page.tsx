@@ -61,11 +61,8 @@ export default function ReceptionPage() {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      apiUrl = apiUrl.replace(/\/$/, '');
-      if (!apiUrl.endsWith('/api')) apiUrl += '/api';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-      // 1. Enviar datos al backend
       const res = await fetch(`${apiUrl}/appointments/reception`, {
         method: 'POST',
         headers: {
