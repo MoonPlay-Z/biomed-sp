@@ -81,3 +81,14 @@ La llave que generamos hoy (`juanaac2003@gmail.com`) está en esta PC. En la nue
 
 ---
 *Este manual es confidencial y contiene claves de acceso. Guárdalo en un lugar seguro.*
+
+
+Según el archivo de configuración del sistema (seed.ts), las credenciales predeterminadas para las pruebas locales son:
+
+Email Administrador: admin@jamechanic.com
+Contraseña: admin123
+También existen otros roles para pruebas:
+
+Técnico: tech@jamechanic.com / admin123
+Cliente: contacto@clinica.com / admin123
+He verificado que el hash de la contraseña en la base de datos corresponde a admin123. ¿Quieres que intente iniciar sesión para verificar el panel de administración?

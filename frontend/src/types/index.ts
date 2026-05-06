@@ -39,6 +39,16 @@ export enum AppointmentStatus {
   DELIVERED = 'DELIVERED',
 }
 
+export interface Message {
+  id: number;
+  appointment_id: number;
+  sender_id: number;
+  mensaje: string;
+  leido: boolean;
+  created_at: string;
+  sender?: Partial<User>;
+}
+
 export interface Appointment {
   id: number;
   client_id: number;
@@ -52,6 +62,7 @@ export interface Appointment {
   client?: Partial<User>;
   tech?: Partial<User>;
   equipment?: Equipment;
+  messages?: Message[];
 }
 
 export interface InventoryItem {
@@ -70,4 +81,36 @@ export interface DashboardStats {
   appointmentsByStatus: { status: AppointmentStatus; count: number }[];
   usersByRole: { role: UserRole; count: number }[];
   lowStockItems: number;
+}
+export enum TransactionType {
+  SALE = 'SALE',
+  REPAIR_USE = 'REPAIR_USE',
+  RESTOCK = 'RESTOCK'
+}
+
+export interface InventoryTransaction {
+  id: string;
+  itemId: number;
+  itemName: string;
+  type: TransactionType;
+  quantity: number;
+  price: number;
+  appointmentId?: number; // Linked to a repair
+  techId: number;
+  techName: string;
+  clientId?: number;
+  clientName?: string;
+  total: number;
+  createdAt: string;
+}
+
+export interface InventoryRequest {
+  id: string;
+  appointmentId: number;
+  itemId: number;
+  itemName: string;
+  quantity: number;
+  status: 'pending' | 'approved' | 'rejected';
+  techId: number;
+  requestedAt: string;
 }

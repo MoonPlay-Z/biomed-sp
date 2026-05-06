@@ -1,0 +1,26 @@
+[build]
+  command = "npm run build:netlify"
+  publish = "frontend/.next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions.api]
+  external_node_modules = ["@prisma/client"]
+  # Incluye los motores de Prisma en el paquete de la función
+  included_files = ["backend/node_modules/.prisma/client/*.node"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  condition = {role = ["!*"]}
