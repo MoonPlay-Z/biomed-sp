@@ -7,7 +7,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { EquipmentModule } from './equipment/equipment.module';
 import { AuthModule } from './auth/auth.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import serverlessExpress from '@vendia/serverless-express';
+import serverless from 'serverless-http';
 import { Handler, Context, Callback } from 'aws-lambda';
 
 // AppModule sin WebSockets/Socket.IO — incompatible con Serverless
@@ -56,7 +56,7 @@ async function bootstrap() {
     console.log('[Lambda] NestJS app initialized successfully');
 
     const expressApp = app.getHttpAdapter().getInstance();
-    return serverlessExpress({ app: expressApp });
+    return serverless(expressApp);
   } catch (err) {
     console.error('[Lambda] Bootstrap FAILED:', err);
     throw err;
