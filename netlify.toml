@@ -13,6 +13,7 @@
   node_bundler = "nft"
   included_files = ["backend/node_modules/.prisma/client/*.node"]
 
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/api/:splat"
