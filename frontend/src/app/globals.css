@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@source "../../";
 /* 
   JaMechanic Premium Design System (Standard CSS)
   Using Tailwind 4 automatic variable mapping to avoid IDE warnings.
