@@ -27,32 +27,40 @@ class ServerlessAppModule {}
 let cachedServer: Handler;
 
 async function bootstrap() {
-  const app = await NestFactory.create(ServerlessAppModule);
+  console.log('[Lambda] Bootstrap starting...');
+  console.log('[Lambda] DATABASE_URL set:', !!process.env.DATABASE_URL);
 
-  // Prefijo global de la API para que coincida con la ruta de la función
-  app.setGlobalPrefix('api');
+  try {
+    const app = await NestFactory.create(ServerlessAppModule, {
+      logger: ['error', 'warn', 'log'],
+    });
 
-  // Habilitar CORS
-  app.enableCors({
-    origin: '*', // En producción podrías restringirlo a tu dominio de Netlify
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-  });
+    app.setGlobalPrefix('api');
 
-  // Validación global
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+    app.enableCors({
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
+    });
 
-  await app.init();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    );
 
-  const expressApp = app.getHttpAdapter().getInstance();
-  return serverlessExpress({ app: expressApp });
+    await app.init();
+    console.log('[Lambda] NestJS app initialized successfully');
+
+    const expressApp = app.getHttpAdapter().getInstance();
+    return serverlessExpress({ app: expressApp });
+  } catch (err) {
+    console.error('[Lambda] Bootstrap FAILED:', err);
+    throw err;
+  }
 }
 
 export const handler: Handler = async (
@@ -60,12 +68,24 @@ export const handler: Handler = async (
   context: Context,
   callback: Callback,
 ) => {
-  // Manejo especial para eventos de calentamiento (warming) si es necesario
+  context.callbackWaitsForEmptyEventLoop = false;
+
   if (event.source === 'serverless-plugin-warmup') {
-    console.log('WarmUp - Lambda is warm!');
     return 'Lambda is warm!';
   }
 
-  cachedServer = cachedServer ?? (await bootstrap());
-  return cachedServer(event, context, callback);
+  try {
+    cachedServer = cachedServer ?? (await bootstrap());
+    return cachedServer(event, context, callback);
+  } catch (err) {
+    console.error('[Lambda] Handler error:', err);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: 'Internal Server Error',
+        message: err instanceof Error ? err.message : String(err),
+      }),
+    };
+  }
 };
