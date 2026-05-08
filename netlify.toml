@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build:netlify"
+  command = "NEXT_PUBLIC_API_URL=/api npm run build:netlify"
   publish = "frontend/.next"
 
 [[plugins]]
