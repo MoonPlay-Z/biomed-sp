@@ -10,7 +10,7 @@
   node_bundler = "esbuild"
 
 [functions.api]
-  external_node_modules = ["@prisma/client"]
+  external_node_modules = ["@prisma/client", "@nestjs/microservices"]
   # Incluye los motores de Prisma en el paquete de la función
   included_files = ["backend/node_modules/.prisma/client/*.node"]
 
