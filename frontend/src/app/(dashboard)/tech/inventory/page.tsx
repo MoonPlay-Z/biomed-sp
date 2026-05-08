@@ -20,31 +20,42 @@ export default function TechInventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [tab, setTab] = useState<'catalog' | 'my-requests'>('catalog');
 
-  const reloadData = useCallback(() => {
-    setItems(getInventory());
-    if (authUser) {
-      setRequests(getRequests().filter(r => r.techId === authUser.id).sort((a,b) => 
-        new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()
-      ));
+  const reloadData = useCallback(async () => {
+    if (!token) return;
+    try {
+      setLoading(true);
+      const [invData, reqData] = await Promise.all([
+        getInventory(token),
+        getRequests(token)
+      ]);
+      setItems(invData);
+      if (authUser) {
+        setRequests(reqData.filter(r => r.tech_id === authUser.id));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [authUser]);
+  }, [token, authUser]);
 
   useEffect(() => {
     reloadData();
   }, [reloadData]);
 
-  const handleRequest = (item: InventoryItem) => {
-    if (!authUser) return;
-    requestPart({
-      appointmentId: 0, // General request or will be linked later
-      itemId: item.id,
-      itemName: item.nombre_repuesto,
-      quantity: 1,
-      techId: authUser.id
-    });
-    alert(`Solicitud enviada para: ${item.nombre_repuesto}`);
-    reloadData();
+  const handleRequest = async (item: InventoryItem) => {
+    if (!token || !authUser) return;
+    try {
+      await requestPart(token, {
+        inventory_id: item.id,
+        quantity: 1,
+        // appointment_id: 0, // Opcional
+      });
+      alert(`Solicitud enviada para: ${item.nombre_repuesto}`);
+      reloadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const filteredItems = items.filter(item => 
@@ -81,7 +92,7 @@ export default function TechInventory() {
             className={clsx("px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative",
               tab === 'my-requests' ? "bg-[#000080] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:bg-slate-50")}>
             Mis Solicitudes
-            {requests.filter(r => r.status === 'pending').length > 0 && (
+            {requests.filter(r => r.status === 'PENDING').length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full animate-pulse border-2 border-white"></span>
             )}
           </button>
@@ -161,7 +172,7 @@ export default function TechInventory() {
                 <h3 className="text-2xl font-black text-slate-900">Historial Vacío</h3>
                 <p className="text-slate-500 mt-2 font-medium max-w-sm mx-auto">Aún no has solicitado repuestos. Cuando lo hagas, podrás seguir el estado de aprobación aquí.</p>
                 <button onClick={() => setTab('catalog')} className="mt-8 px-8 py-4 bg-[#000080] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-900/20">
-                  Explorar Catálogo
+                   Explorar Catálogo
                 </button>
               </div>
             ) : (
@@ -171,33 +182,33 @@ export default function TechInventory() {
                     className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-premium flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-xl transition-all group">
                     <div className="flex items-center gap-6">
                       <div className={clsx("w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner transition-transform group-hover:scale-110",
-                        req.status === 'approved' ? "bg-emerald-50 text-emerald-600" : req.status === 'rejected' ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600")}>
-                        {req.status === 'approved' ? <CheckCircle2 size={28} /> : req.status === 'rejected' ? <X size={28} /> : <Clock size={28} />}
+                        req.status === 'APPROVED' ? "bg-emerald-50 text-emerald-600" : req.status === 'REJECTED' ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600")}>
+                        {req.status === 'APPROVED' ? <CheckCircle2 size={28} /> : req.status === 'REJECTED' ? <X size={28} /> : <Clock size={28} />}
                       </div>
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <h4 className="font-black text-xl text-slate-900 tracking-tight">{req.itemName}</h4>
+                          <h4 className="font-black text-xl text-slate-900 tracking-tight">{req.inventory?.nombre_repuesto}</h4>
                           <span className={clsx("px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
-                            req.status === 'approved' ? "bg-emerald-100 text-emerald-700" : req.status === 'rejected' ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700")}>
-                            {req.status === 'approved' ? 'Aprobado' : req.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
+                            req.status === 'APPROVED' ? "bg-emerald-100 text-emerald-700" : req.status === 'REJECTED' ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700")}>
+                            {req.status === 'APPROVED' ? 'Aprobado' : req.status === 'REJECTED' ? 'Rechazado' : 'Pendiente'}
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 font-bold uppercase tracking-widest flex items-center gap-4">
                           <span className="flex items-center gap-1.5"><Box size={14} className="text-blue-500" /> Cant: {req.quantity}</span>
-                          <span className="flex items-center gap-1.5"><Calendar size={14} className="text-blue-500" /> {new Date(req.requestedAt).toLocaleDateString()}</span>
-                          {req.appointmentId !== 0 && <span className="flex items-center gap-1.5"><Wrench size={14} className="text-blue-500" /> Ficha: #{req.appointmentId}</span>}
+                          <span className="flex items-center gap-1.5"><Calendar size={14} className="text-blue-500" /> {new Date(req.requested_at).toLocaleDateString()}</span>
+                          {req.appointment_id && <span className="flex items-center gap-1.5"><Wrench size={14} className="text-blue-500" /> Ficha: #{req.appointment_id}</span>}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      {req.status === 'pending' ? (
+                      {req.status === 'PENDING' ? (
                         <div className="flex items-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 px-4 py-2 rounded-xl">
                           <Clock size={14} className="animate-spin-slow" /> Esperando Aprobación
                         </div>
                       ) : (
                         <div className="text-right">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Procesado el</p>
-                          <p className="text-sm font-black text-slate-900">{new Date(req.requestedAt).toLocaleDateString()}</p>
+                          <p className="text-sm font-black text-slate-900">{req.resolved_at ? new Date(req.resolved_at).toLocaleDateString() : '---'}</p>
                         </div>
                       )}
                       <button className="p-3 text-slate-300 hover:text-blue-600 hover:bg-slate-50 rounded-xl transition-all">

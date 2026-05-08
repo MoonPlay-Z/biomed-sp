@@ -89,28 +89,28 @@ export enum TransactionType {
 }
 
 export interface InventoryTransaction {
-  id: string;
-  itemId: number;
-  itemName: string;
+  id: number;
+  inventory_id: number;
+  appointment_id?: number;
+  user_id: number;
   type: TransactionType;
   quantity: number;
-  price: number;
-  appointmentId?: number; // Linked to a repair
-  techId: number;
-  techName: string;
-  clientId?: number;
-  clientName?: string;
-  total: number;
-  createdAt: string;
+  price_at_time?: number;
+  created_at: string;
+  inventory?: InventoryItem;
+  user?: Partial<User>;
 }
 
 export interface InventoryRequest {
-  id: string;
-  appointmentId: number;
-  itemId: number;
-  itemName: string;
+  id: number;
+  inventory_id: number;
+  tech_id: number;
+  appointment_id?: number;
   quantity: number;
-  status: 'pending' | 'approved' | 'rejected';
-  techId: number;
-  requestedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requested_at: string;
+  resolved_at?: string;
+  notes?: string;
+  inventory?: InventoryItem;
+  tech?: Partial<User>;
 }

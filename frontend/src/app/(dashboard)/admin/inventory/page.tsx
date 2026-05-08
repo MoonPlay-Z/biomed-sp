@@ -3,7 +3,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { InventoryItem, InventoryTransaction, InventoryRequest, TransactionType } from '@/types';
-import { getInventory, saveInventory, getTransactions, getRequests, saveRequests, approveRequest } from '@/lib/inventoryStore';
+import { 
+  getInventory, 
+  getTransactions, 
+  getRequests, 
+  approveRequest, 
+  rejectRequest 
+} from '@/lib/inventoryStore';
 import { 
   Package, Search, Plus, AlertTriangle, Edit3, Trash2, Filter,
   CheckCircle2, X, History, DollarSign, TrendingUp, TrendingDown,
@@ -21,26 +27,47 @@ export default function AdminInventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [tab, setTab] = useState<'inventory' | 'requests' | 'history'>('inventory');
 
-  const reloadData = useCallback(() => {
-    setItems(getInventory());
-    setTransactions(getTransactions().sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    setRequests(getRequests().sort((a,b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()));
-    setLoading(false);
-  }, []);
+  const reloadData = useCallback(async () => {
+    if (!token) return;
+    try {
+      setLoading(true);
+      const [invData, transData, reqData] = await Promise.all([
+        getInventory(token),
+        getTransactions(token),
+        getRequests(token)
+      ]);
+      setItems(invData);
+      setTransactions(transData);
+      setRequests(reqData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     reloadData();
   }, [reloadData]);
 
-  const handleApprove = (reqId: string) => {
-    approveRequest(reqId, 'Administrador'); // In a real app, use active admin name
-    reloadData();
+  const handleApprove = async (reqId: number) => {
+    if (!token) return;
+    try {
+      await approveRequest(token, reqId);
+      reloadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
-  const handleReject = (reqId: string) => {
-    const updated = getRequests().map(r => r.id === reqId ? { ...r, status: 'rejected' as const } : r);
-    saveRequests(updated);
-    reloadData();
+  const handleReject = async (reqId: number) => {
+    if (!token) return;
+    try {
+      await rejectRequest(token, reqId);
+      reloadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const filteredItems = items.filter(item => 
@@ -77,14 +104,18 @@ export default function AdminInventory() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Valor Total', value: `$${items.reduce((acc, i) => acc + (i.cantidad * (i.costo_unitario || 0)), 0).toLocaleString()}`, icon: DollarSign, color: 'blue' },
+          { label: 'Valor Total', value: `$${items.reduce((acc, i) => acc + (i.cantidad * (Number(i.costo_unitario) || 0)), 0).toLocaleString()}`, icon: DollarSign, color: 'blue' },
           { label: 'Ítems en Stock', value: items.reduce((acc, i) => acc + i.cantidad, 0), icon: Package, color: 'emerald' },
           { label: 'Stock Crítico', value: items.filter(i => i.cantidad <= i.cantidad_minima).length, icon: AlertTriangle, color: 'amber' },
-          { label: 'Solicitudes', value: requests.filter(r => r.status === 'pending').length, icon: Clock, color: 'indigo' },
+          { label: 'Solicitudes', value: requests.filter(r => r.status === 'PENDING').length, icon: Clock, color: 'indigo' },
         ].map((stat, i) => (
           <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
-            className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-premium flex items-center gap-5 hover:shadow-xl transition-all group">
-            <div className={`w-14 h-14 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
+            className={clsx("bg-white p-6 rounded-[2rem] border border-slate-100 shadow-premium flex items-center gap-5 hover:shadow-xl transition-all group")}>
+            <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform", 
+              stat.color === 'blue' ? "bg-blue-50 text-blue-600" : 
+              stat.color === 'emerald' ? "bg-emerald-50 text-emerald-600" : 
+              stat.color === 'amber' ? "bg-amber-50 text-amber-600" : 
+              "bg-indigo-50 text-indigo-600")}>
               <stat.icon size={28} />
             </div>
             <div>
@@ -99,7 +130,7 @@ export default function AdminInventory() {
       <div className="flex gap-2 bg-slate-100 p-1.5 rounded-[1.5rem] w-fit border border-slate-200">
         {[
           { id: 'inventory', label: 'Inventario de Repuestos', icon: Package },
-          { id: 'requests', label: 'Solicitudes Técnicas', icon: Clock, count: requests.filter(r => r.status === 'pending').length },
+          { id: 'requests', label: 'Solicitudes Técnicas', icon: Clock, count: requests.filter(r => r.status === 'PENDING').length },
           { id: 'history', label: 'Historial / Facturación', icon: History },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id as any)}
@@ -162,7 +193,7 @@ export default function AdminInventory() {
                         <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-widest">Min Requerido: {item.cantidad_minima}</p>
                       </td>
                       <td className="px-8 py-6">
-                        <p className="text-lg font-black text-[#000080] tracking-tighter">${item.costo_unitario?.toFixed(2)}</p>
+                        <p className="text-lg font-black text-[#000080] tracking-tighter">${Number(item.costo_unitario)?.toFixed(2)}</p>
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2">
@@ -197,16 +228,16 @@ export default function AdminInventory() {
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center gap-3 mb-2">
-                          <h3 className="text-xl font-black text-slate-900 tracking-tight">{req.itemName}</h3>
+                          <h3 className="text-xl font-black text-slate-900 tracking-tight">{req.inventory?.nombre_repuesto}</h3>
                           <span className={clsx("px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest", 
-                            req.status === 'pending' ? "bg-amber-100 text-amber-600" : req.status === 'approved' ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600")}>
+                            req.status === 'PENDING' ? "bg-amber-100 text-amber-600" : req.status === 'APPROVED' ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600")}>
                             {req.status}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs font-bold text-slate-500">
-                          <span className="flex items-center gap-2"><User size={14} className="text-indigo-500" /> Técnico ID: #{req.techId}</span>
-                          <span className="flex items-center gap-2"><FileText size={14} className="text-indigo-500" /> Ficha: #{req.appointmentId}</span>
-                          <span className="flex items-center gap-2"><Clock size={14} className="text-indigo-500" /> {new Date(req.requestedAt).toLocaleString()}</span>
+                          <span className="flex items-center gap-2"><User size={14} className="text-indigo-500" /> Técnico: {req.tech?.nombre}</span>
+                          <span className="flex items-center gap-2"><FileText size={14} className="text-indigo-500" /> Ficha: #{req.appointment_id || 'N/A'}</span>
+                          <span className="flex items-center gap-2"><Clock size={14} className="text-indigo-500" /> {new Date(req.requested_at).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -216,7 +247,7 @@ export default function AdminInventory() {
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cant Solicitada</p>
                         <p className="text-xl font-black text-slate-900 tracking-tight">{req.quantity} Unidades</p>
                       </div>
-                      {req.status === 'pending' && (
+                      {req.status === 'PENDING' && (
                         <div className="flex gap-2">
                           <button onClick={() => handleApprove(req.id)}
                             className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all">
@@ -257,21 +288,21 @@ export default function AdminInventory() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-black text-slate-900 tracking-tight">{t.itemName}</h4>
+                              <h4 className="font-black text-slate-900 tracking-tight">{t.inventory?.nombre_repuesto}</h4>
                               <span className={clsx("px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest", 
                                 t.type === TransactionType.SALE ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700")}>
                                 {t.type}
                               </span>
                             </div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-4">
-                              <span className="flex items-center gap-1"><User size={10} /> {t.techName}</span>
-                              <span className="flex items-center gap-1"><Clock size={10} /> {new Date(t.createdAt).toLocaleDateString()}</span>
-                              {t.appointmentId && <span className="flex items-center gap-1 font-mono">#{t.appointmentId}</span>}
+                              <span className="flex items-center gap-1"><User size={10} /> {t.user?.nombre}</span>
+                              <span className="flex items-center gap-1"><Clock size={10} /> {new Date(t.created_at).toLocaleDateString()}</span>
+                              {t.appointment_id && <span className="flex items-center gap-1 font-mono">#{t.appointment_id}</span>}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-black text-slate-900 tracking-tighter">${t.total.toFixed(2)}</p>
+                          <p className="text-2xl font-black text-slate-900 tracking-tighter">${(t.quantity * Number(t.price_at_time || 0)).toFixed(2)}</p>
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cant: {t.quantity}</p>
                         </div>
                       </div>
@@ -291,18 +322,18 @@ export default function AdminInventory() {
                     <div className="space-y-8">
                       <div>
                         <p className="text-5xl font-black tracking-tighter mb-2">
-                          ${transactions.reduce((acc, t) => acc + t.total, 0).toLocaleString()}
+                          ${transactions.reduce((acc, t) => acc + (t.quantity * Number(t.price_at_time || 0)), 0).toLocaleString()}
                         </p>
                         <p className="text-xs font-medium text-blue-200">Total ingresos por venta de repuestos y reparaciones.</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4 pt-8 border-t border-white/10">
                         <div>
                           <p className="text-[9px] font-black uppercase tracking-widest text-blue-300 mb-1">Ventas</p>
-                          <p className="text-xl font-black">${transactions.filter(t => t.type === TransactionType.SALE).reduce((acc, t) => acc + t.total, 0).toLocaleString()}</p>
+                          <p className="text-xl font-black">${transactions.filter(t => t.type === TransactionType.SALE).reduce((acc, t) => acc + (t.quantity * Number(t.price_at_time || 0)), 0).toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-[9px] font-black uppercase tracking-widest text-blue-300 mb-1">Reparaciones</p>
-                          <p className="text-xl font-black">${transactions.filter(t => t.type === TransactionType.REPAIR_USE).reduce((acc, t) => acc + t.total, 0).toLocaleString()}</p>
+                          <p className="text-xl font-black">${transactions.filter(t => t.type === TransactionType.REPAIR_USE).reduce((acc, t) => acc + (t.quantity * Number(t.price_at_time || 0)), 0).toLocaleString()}</p>
                         </div>
                       </div>
                     </div>

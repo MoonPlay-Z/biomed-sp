@@ -20,6 +20,8 @@ model users {
   appointments_as_client appointments[] @relation("ClientAppointments")
   appointments_as_tech   appointments[] @relation("TechAppointments")
   messages               messages[]
+  part_requests          part_requests[]
+  inventory_transactions inventory_transactions[]
 }
 
 model equipments {
@@ -49,6 +51,8 @@ model appointments {
   equipment         equipments?        @relation(fields: [equipment_id], references: [id])
   tech              users?             @relation("TechAppointments", fields: [tech_id], references: [id])
   messages          messages[]
+  part_requests     part_requests[]
+  inventory_transactions inventory_transactions[]
 
   @@index([status], map: "idx_appointment_status")
 }
@@ -62,6 +66,9 @@ model inventory {
   costo_unitario  Decimal?  @db.Decimal(10, 2)
   proveedor       String?   @db.VarChar(100)
   last_restock    DateTime?
+
+  part_requests          part_requests[]
+  inventory_transactions inventory_transactions[]
 }
 
 model messages {
@@ -89,4 +96,48 @@ enum appointment_status {
   WAITING_PARTS
   FINISHED
   DELIVERED
+}
+
+model part_requests {
+  id             Int            @id @default(autoincrement())
+  inventory_id   Int
+  tech_id        Int
+  appointment_id Int?
+  quantity       Int
+  status         request_status @default(PENDING)
+  requested_at   DateTime       @default(now())
+  resolved_at    DateTime?
+  notes          String?
+
+  inventory      inventory      @relation(fields: [inventory_id], references: [id])
+  tech           users          @relation(fields: [tech_id], references: [id])
+  appointment    appointments?  @relation(fields: [appointment_id], references: [id])
+}
+
+model inventory_transactions {
+  id             Int              @id @default(autoincrement())
+  inventory_id   Int
+  appointment_id Int?
+  user_id        Int              // Admin que aprueba o técnico que usa
+  type           transaction_type
+  quantity       Int
+  price_at_time  Decimal?         @db.Decimal(10, 2)
+  created_at     DateTime         @default(now())
+
+  inventory      inventory        @relation(fields: [inventory_id], references: [id])
+  appointment    appointments?    @relation(fields: [appointment_id], references: [id])
+  user           users            @relation(fields: [user_id], references: [id])
+}
+
+enum request_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum transaction_type {
+  REPAIR_USE
+  SALE
+  RESTOCK
+  ADJUSTMENT
 }
