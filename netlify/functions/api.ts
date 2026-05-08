@@ -1,1 +1,1 @@
-export { handler } from '../../backend/dist/lambda';
+export { handler } from '../../backend/src/lambda';
