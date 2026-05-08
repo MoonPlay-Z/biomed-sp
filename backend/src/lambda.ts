@@ -1,13 +1,33 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { AppModule } from './app.module';
+import { ValidationPipe, Module } from '@nestjs/common';
+import { PrismaModule } from './prisma/prisma.module';
+import { UsersModule } from './users/users.module';
+import { AppointmentsModule } from './appointments/appointments.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { EquipmentModule } from './equipment/equipment.module';
+import { AuthModule } from './auth/auth.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import serverlessExpress from '@vendia/serverless-express';
 import { Handler, Context, Callback } from 'aws-lambda';
+
+// AppModule sin WebSockets/Socket.IO — incompatible con Serverless
+@Module({
+  imports: [
+    PrismaModule,
+    UsersModule,
+    AppointmentsModule,
+    InventoryModule,
+    EquipmentModule,
+    AuthModule,
+    DashboardModule,
+  ],
+})
+class ServerlessAppModule {}
 
 let cachedServer: Handler;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(ServerlessAppModule);
 
   // Prefijo global de la API para que coincida con la ruta de la función
   app.setGlobalPrefix('api');
