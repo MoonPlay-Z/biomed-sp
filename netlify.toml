@@ -11,8 +11,7 @@
 
 [functions.api]
   node_bundler = "nft"
-  external_node_modules = ["@prisma/client", "@nestjs/microservices", "@nestjs/websockets", "socket.io"]
-  included_files = ["backend/node_modules/.prisma/client/*.node", "backend/dist/**", "backend/node_modules/**"]
+  included_files = ["backend/node_modules/.prisma/client/*.node"]
 
 [[redirects]]
   from = "/api/*"
