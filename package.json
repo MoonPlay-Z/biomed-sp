@@ -6,7 +6,7 @@
     "install:all": "npm install --prefix frontend && npm install --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
-    "build:netlify": "npm run install:all && cd backend && npx prisma generate && npm run build && cd ../frontend && npm run build",
+    "build:netlify": "npm install --include=dev && npm run install:all && cd backend && npx prisma generate && npm run build && cd ../frontend && npm run build",
     "build": "npm run build:netlify"
   }
 }

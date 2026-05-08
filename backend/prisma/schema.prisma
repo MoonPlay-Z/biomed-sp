@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -8,49 +8,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum user_role {
-  ADMIN
-  TECH
-  CLIENT
-}
-
-enum appointment_status {
-  RECEIVED
-  DIAGNOSING
-  WAITING_PARTS
-  FINISHED
-  DELIVERED
-}
-
 model users {
-  id            Int       @id @default(autoincrement())
-  nombre        String    @db.VarChar(100)
-  email         String    @unique @db.VarChar(150)
-  password_hash String
-  rif_cedula    String?   @unique @db.VarChar(20)
-  telefono      String?   @db.VarChar(20)
-  role          user_role @default(CLIENT)
-  created_at    DateTime  @default(now())
-
-  // Relaciones inversas
+  id                     Int            @id @default(autoincrement())
+  nombre                 String         @db.VarChar(100)
+  email                  String         @unique @db.VarChar(150)
+  password_hash          String
+  rif_cedula             String?        @unique @db.VarChar(20)
+  telefono               String?        @db.VarChar(20)
+  role                   user_role      @default(CLIENT)
+  created_at             DateTime       @default(now())
   appointments_as_client appointments[] @relation("ClientAppointments")
   appointments_as_tech   appointments[] @relation("TechAppointments")
   messages               messages[]
 }
 
 model equipments {
-  id            Int      @id @default(autoincrement())
-  tipo_equipo   String   @db.VarChar(100)
-  marca         String   @db.VarChar(50)
-  modelo        String   @db.VarChar(50)
-  serial_number String   @unique @db.VarChar(100)
-  imagenes_url  String[] // Array text
-  created_at    DateTime @default(now())
+  id            Int            @id @default(autoincrement())
+  tipo_equipo   String         @db.VarChar(100)
+  marca         String         @db.VarChar(50)
+  modelo        String         @db.VarChar(50)
+  serial_number String         @unique @db.VarChar(100)
+  imagenes_url  String[]
+  created_at    DateTime       @default(now())
+  appointments  appointments[]
 
-  // Relaciones
-  appointments appointments[]
-
-  @@index([serial_number], name: "idx_equipment_serial")
+  @@index([serial_number], map: "idx_equipment_serial")
 }
 
 model appointments {
@@ -58,19 +40,17 @@ model appointments {
   client_id         Int?
   tech_id           Int?
   equipment_id      Int?
-  descripcion_falla String             @db.Text
+  descripcion_falla String
   status            appointment_status @default(RECEIVED)
   fecha_cita        DateTime
-  notas_tecnicas    String?            @db.Text
+  notas_tecnicas    String?
   created_at        DateTime           @default(now())
+  client            users?             @relation("ClientAppointments", fields: [client_id], references: [id])
+  equipment         equipments?        @relation(fields: [equipment_id], references: [id])
+  tech              users?             @relation("TechAppointments", fields: [tech_id], references: [id])
+  messages          messages[]
 
-  // Relaciones
-  client    users?      @relation("ClientAppointments", fields: [client_id], references: [id])
-  tech      users?      @relation("TechAppointments", fields: [tech_id], references: [id])
-  equipment equipments? @relation(fields: [equipment_id], references: [id])
-  messages  messages[]
-
-  @@index([status], name: "idx_appointment_status")
+  @@index([status], map: "idx_appointment_status")
 }
 
 model inventory {
@@ -85,16 +65,28 @@ model inventory {
 }
 
 model messages {
-  id             Int      @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   appointment_id Int?
   sender_id      Int?
-  mensaje        String   @db.Text
-  leido          Boolean  @default(false)
-  created_at     DateTime @default(now())
+  mensaje        String
+  leido          Boolean       @default(false)
+  created_at     DateTime      @default(now())
+  appointment    appointments? @relation(fields: [appointment_id], references: [id])
+  sender         users?        @relation(fields: [sender_id], references: [id])
 
-  // Relaciones
-  appointment appointments? @relation(fields: [appointment_id], references: [id])
-  sender      users?        @relation(fields: [sender_id], references: [id])
+  @@index([appointment_id, created_at], map: "idx_chat_messages")
+}
 
-  @@index([appointment_id, created_at], name: "idx_chat_messages")
+enum user_role {
+  ADMIN
+  TECH
+  CLIENT
+}
+
+enum appointment_status {
+  RECEIVED
+  DIAGNOSING
+  WAITING_PARTS
+  FINISHED
+  DELIVERED
 }
