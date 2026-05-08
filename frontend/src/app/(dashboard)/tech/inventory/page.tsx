@@ -7,7 +7,7 @@ import { getInventory, getRequests, requestPart } from '@/lib/inventoryStore';
 import { 
   Package, Search, AlertTriangle, History, ShoppingCart, 
   ChevronRight, Clock, CheckCircle2, X, Plus, Filter,
-  ArrowRight, Box, Wrench
+  ArrowRight, Box, Wrench, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
