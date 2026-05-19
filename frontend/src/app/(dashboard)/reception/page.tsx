@@ -20,8 +20,8 @@ const formSchema = z.object({
   issueDescription: z.string().min(10, 'Describe la falla con más detalle'),
 
   // Sección 3: Imágenes
-  images: z.custom<FileList>()
-    .refine((files) => files && files.length === 3, 'Debe subir exactamente 3 imágenes (Frontal, Trasera, Detalle de Falla).')
+  images: z.custom<FileList>().optional()
+    .refine((files) => !files || files.length === 0 || files.length === 3, 'Si decide subir fotos, por favor incluya exactamente 3 (Frontal, Trasera, Detalle de Falla).')
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -181,9 +181,9 @@ export default function ReceptionPage() {
         <div>
           <h2 className="text-xl font-semibold text-[#000080] mb-4 flex items-center border-b pb-2">
             <span className="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">3</span>
-            Documentación Fotográfica
+            Documentación Fotográfica (Opcional)
           </h2>
-          <p className="text-sm text-slate-500 mb-4">Se requieren exactamente 3 imágenes (Frontal, Trasera y Detalle de la Falla).</p>
+          <p className="text-sm text-slate-500 mb-4">Si lo desea, puede subir 3 imágenes (Frontal, Trasera y Detalle de la Falla).</p>
           
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
             <input
