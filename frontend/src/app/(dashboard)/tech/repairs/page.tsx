@@ -8,7 +8,7 @@ import {
   Wrench, Calendar, User, Monitor, ChevronRight,
   CheckCircle2, AlertCircle, Crown, Package, Plus,
   FileText, History, DollarSign, X, ArrowRight, ShoppingCart,
-  Clock
+  Clock, MessageSquare
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
