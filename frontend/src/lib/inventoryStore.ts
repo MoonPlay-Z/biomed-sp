@@ -18,8 +18,12 @@ export async function getRequests(token: string): Promise<InventoryRequest[]> {
   return res.json();
 }
 
-export async function getTransactions(token: string): Promise<InventoryTransaction[]> {
-  const res = await fetch(`${API_URL}/inventory/transactions/all`, {
+export async function getTransactions(token: string, appointmentId?: number): Promise<InventoryTransaction[]> {
+  const url = appointmentId 
+    ? `${API_URL}/inventory/transactions/all?appointmentId=${appointmentId}`
+    : `${API_URL}/inventory/transactions/all`;
+    
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` }
   });
   if (!res.ok) throw new Error('Error al obtener transacciones');

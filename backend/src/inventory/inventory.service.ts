@@ -46,9 +46,9 @@ export class InventoryService {
   createRequest(techId: number, dto: CreatePartRequestDto) {
     return this.prisma.part_requests.create({
       data: {
-        inventory_id: dto.inventory_id,
-        tech_id: techId,
-        appointment_id: dto.appointment_id,
+        inventory: { connect: { id: dto.inventory_id } },
+        tech: { connect: { id: techId } },
+        appointment: dto.appointment_id ? { connect: { id: dto.appointment_id } } : undefined,
         quantity: dto.quantity,
         status: request_status.PENDING,
       },
@@ -138,8 +138,9 @@ export class InventoryService {
 
   // --- Historial de Transacciones ---
 
-  getTransactions() {
+  getTransactions(appointmentId?: number) {
     return this.prisma.inventory_transactions.findMany({
+      where: appointmentId ? { appointment_id: appointmentId } : {},
       orderBy: { created_at: 'desc' },
       include: {
         inventory: true,

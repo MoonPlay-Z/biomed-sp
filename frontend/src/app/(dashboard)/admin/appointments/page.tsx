@@ -109,10 +109,35 @@ export default function AdminAppointments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Gestión de Citas</h1>
-          <p className="text-slate-500 mt-1">Supervise, asigne y controle todas las reparaciones activas.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Gestión de Citas</h1>
+          <p className="text-slate-500 mt-2 text-lg font-medium">Supervise, asigne y controle todas las reparaciones activas.</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="bg-white px-6 py-4 rounded-[1.5rem] border border-slate-100 shadow-premium flex items-center gap-4">
+            <div className={clsx(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner transition-colors",
+              appointments.filter(a => !a.tech_id).length > 0 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
+            )}>
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-black text-slate-900 leading-none">
+                {appointments.filter(a => !a.tech_id).length}
+              </p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Sin Asignar</p>
+            </div>
+          </div>
+          <div className="bg-[#000080] px-6 py-4 rounded-[1.5rem] shadow-xl shadow-blue-900/20 text-white flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+              <Wrench size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-black leading-none">{appointments.length}</p>
+              <p className="text-[9px] font-black text-blue-200 uppercase tracking-widest mt-1">Totales</p>
+            </div>
+          </div>
         </div>
       </div>
 

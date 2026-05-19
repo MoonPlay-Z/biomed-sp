@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryDto } from './dto/create-inventory.dto';
@@ -69,7 +70,7 @@ export class InventoryController {
   @Post('requests')
   @Roles(user_role.TECH)
   createRequest(@Request() req: any, @Body() dto: CreatePartRequestDto) {
-    const techId = req.user.sub; // del JWT payload
+    const techId = req.user.id; // del JWT payload
     return this.inventoryService.createRequest(techId, dto);
   }
 
@@ -82,20 +83,20 @@ export class InventoryController {
   @Patch('requests/:id/approve')
   @Roles(user_role.ADMIN)
   approveRequest(@Param('id') id: string, @Request() req: any) {
-    const adminId = req.user.sub;
+    const adminId = req.user.id;
     return this.inventoryService.approveRequest(+id, adminId);
   }
 
   @Patch('requests/:id/reject')
   @Roles(user_role.ADMIN)
   rejectRequest(@Param('id') id: string, @Request() req: any) {
-    const adminId = req.user.sub;
+    const adminId = req.user.id;
     return this.inventoryService.rejectRequest(+id, adminId);
   }
 
   @Get('transactions/all')
-  @Roles(user_role.ADMIN)
-  getTransactions() {
-    return this.inventoryService.getTransactions();
+  @Roles(user_role.ADMIN, user_role.TECH)
+  getTransactions(@Query('appointmentId') appointmentId?: string) {
+    return this.inventoryService.getTransactions(appointmentId ? +appointmentId : undefined);
   }
 }

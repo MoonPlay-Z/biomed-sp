@@ -18,6 +18,8 @@ import { ReceptionDto } from './dto/reception.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 
+import { CreateMessageDto } from './dto/create-message.dto';
+
 @Controller('appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AppointmentsController {
@@ -50,9 +52,9 @@ export class AppointmentsController {
   findMy(@Request() req: any) {
     const user = req.user;
     if (user.role === 'CLIENT') {
-      return this.appointmentsService.findAll({ clientId: user.id });
+      return this.appointmentsService.findAll({ clientId: user.sub });
     } else if (user.role === 'TECH') {
-      return this.appointmentsService.findAll({ techId: user.id });
+      return this.appointmentsService.findAll({ techId: user.sub });
     }
     return this.appointmentsService.findAll({});
   }
@@ -73,5 +75,22 @@ export class AppointmentsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.appointmentsService.remove(+id);
+  }
+
+  // --- Comunicación (Mensajería REST) ---
+
+  @Get(':id/messages')
+  getMessages(@Param('id') id: string) {
+    return this.appointmentsService.getMessages(+id);
+  }
+
+  @Post(':id/messages')
+  addMessage(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() dto: CreateMessageDto,
+  ) {
+    const userId = req.user.sub;
+    return this.appointmentsService.addMessage(+id, userId, dto.mensaje);
   }
 }

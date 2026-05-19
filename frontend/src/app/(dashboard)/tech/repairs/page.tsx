@@ -2,16 +2,17 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Appointment, AppointmentStatus, InventoryItem, InventoryTransaction, TransactionType } from '@/types';
-import { getClientActivePlan } from '@/lib/subscriptionStore';
-import { getInventory, requestPart, getRepairTransactions, getRequests } from '@/lib/inventoryStore';
+import { Appointment, AppointmentStatus, InventoryItem, InventoryTransaction } from '@/types';
+import { getInventory, requestPart, getTransactions } from '@/lib/inventoryStore';
 import { 
   Wrench, Calendar, User, Monitor, ChevronRight,
   CheckCircle2, AlertCircle, Crown, Package, Plus,
-  FileText, History, DollarSign, X, ArrowRight, ShoppingCart
+  FileText, History, DollarSign, X, ArrowRight, ShoppingCart,
+  Clock
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const statusColors: Record<AppointmentStatus, string> = {
   [AppointmentStatus.RECEIVED]: 'bg-slate-100 text-slate-600',
@@ -23,6 +24,7 @@ const statusColors: Record<AppointmentStatus, string> = {
 
 export default function TechRepairs() {
   const { token, user: authUser } = useAuth();
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
@@ -31,7 +33,6 @@ export default function TechRepairs() {
   // Inventory state
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [usedParts, setUsedParts] = useState<InventoryTransaction[]>([]);
-  const [pendingReqs, setPendingReqs] = useState<number>(0);
 
   const reloadData = useCallback(async () => {
     if (!token) return;
@@ -44,7 +45,8 @@ export default function TechRepairs() {
         const data = await res.json();
         setAppointments(data);
       }
-      setInventory(getInventory());
+      const invData = await getInventory(token);
+      setInventory(invData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -76,23 +78,32 @@ export default function TechRepairs() {
     }
   };
 
-  const openFicha = (apt: Appointment) => {
+  const openFicha = async (apt: Appointment) => {
+    if (!token) return;
     setSelectedApt(apt);
-    setUsedParts(getRepairTransactions(apt.id));
-    setShowFicha(true);
+    try {
+      const transactions = await getTransactions(token, apt.id);
+      setUsedParts(transactions);
+      setShowFicha(true);
+    } catch (err) {
+      console.error(err);
+      setUsedParts([]);
+      setShowFicha(true);
+    }
   };
 
-  const handleRequestPart = (item: InventoryItem) => {
-    if (!selectedApt || !authUser) return;
-    requestPart({
-      appointmentId: selectedApt.id,
-      itemId: item.id,
-      itemName: item.nombre_repuesto,
-      quantity: 1,
-      techId: authUser.id
-    });
-    alert(`Solicitud enviada para: ${item.nombre_repuesto}`);
-    // Refresh if needed, but requests are for admin to approve
+  const handleRequestPart = async (item: InventoryItem) => {
+    if (!selectedApt || !authUser || !token) return;
+    try {
+      await requestPart(token, {
+        appointment_id: selectedApt.id,
+        inventory_id: item.id,
+        quantity: 1,
+      });
+      alert(`Solicitud enviada para: ${item.nombre_repuesto}. El administrador debe aprobarla para que aparezca en la ficha.`);
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   if (loading) {
@@ -128,7 +139,7 @@ export default function TechRepairs() {
           </div>
           <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <History size={24} />
+              <Clock size={24} />
             </div>
             <div>
               <p className="text-2xl font-black text-slate-900 leading-none">{appointments.filter(a => a.status === AppointmentStatus.DIAGNOSING).length}</p>
@@ -147,7 +158,6 @@ export default function TechRepairs() {
           </div>
         ) : (
           appointments.map((apt, index) => {
-            const plan = apt.client_id ? getClientActivePlan(apt.client_id) : null;
             return (
               <motion.div
                 key={apt.id}
@@ -170,11 +180,6 @@ export default function TechRepairs() {
                         <span className={clsx("px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest", statusColors[apt.status])}>
                           {apt.status}
                         </span>
-                        {plan && (
-                          <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-100">
-                            <Crown size={12} /> {plan.plan.name}
-                          </span>
-                        )}
                       </div>
                       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-slate-500">
                         <span className="flex items-center gap-2 italic"><User size={14} className="text-blue-500" /> {apt.client?.nombre}</span>
@@ -230,7 +235,7 @@ export default function TechRepairs() {
         )}
       </div>
 
-      {/* Ficha de Reparación Modal — FULL REDESIGN */}
+      {/* Ficha de Reparación Modal */}
       <AnimatePresence>
         {showFicha && selectedApt && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-6">
@@ -247,9 +252,18 @@ export default function TechRepairs() {
                     <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">ID: #{selectedApt.id} • {selectedApt.equipment?.marca} {selectedApt.equipment?.modelo}</p>
                   </div>
                 </div>
-                <button onClick={() => setShowFicha(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all">
-                  <X size={28} className="text-slate-400" />
-                </button>
+                <div className="flex items-center gap-3">
+                  <a 
+                    href={`/chat?appointmentId=${selectedApt.id}`}
+                    target="_blank"
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-50 text-blue-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all"
+                  >
+                    <MessageSquare size={14} /> Chat de Soporte
+                  </a>
+                  <button onClick={() => setShowFicha(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all">
+                    <X size={28} className="text-slate-400" />
+                  </button>
+                </div>
               </div>
 
               {/* Modal Body */}
@@ -296,17 +310,17 @@ export default function TechRepairs() {
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-500 font-bold">Repuestos Utilizados</span>
-                        <span className="text-slate-900 font-black">${usedParts.reduce((acc, t) => acc + t.total, 0).toFixed(2)}</span>
+                        <span className="text-slate-900 font-black">${usedParts.reduce((acc, t) => acc + (t.quantity * Number(t.price_at_time || 0)), 0).toFixed(2)}</span>
                       </div>
                       <div className="pt-4 border-t border-slate-200 flex justify-between items-end">
                         <span className="text-slate-900 font-black text-xl tracking-tight">TOTAL FINAL</span>
-                        <span className="text-3xl font-black text-[#000080] tracking-tighter">${usedParts.reduce((acc, t) => acc + t.total, 0).toFixed(2)}</span>
+                        <span className="text-3xl font-black text-[#000080] tracking-tighter">${usedParts.reduce((acc, t) => acc + (t.quantity * Number(t.price_at_time || 0)), 0).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Middle Column: Used Parts (Ficha) */}
+                {/* Middle Column: Used Parts */}
                 <div className="lg:col-span-2 space-y-8">
                   <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
                     <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
@@ -325,7 +339,7 @@ export default function TechRepairs() {
                             <ShoppingCart size={40} />
                           </div>
                           <p className="text-slate-400 font-bold text-sm">No se han registrado repuestos aún.</p>
-                          <p className="text-slate-300 text-xs mt-1">Usa el selector de la derecha para solicitar inventario.</p>
+                          <p className="text-slate-300 text-xs mt-1">Usa el selector inferior para solicitar inventario.</p>
                         </div>
                       ) : (
                         <div className="space-y-4">
@@ -336,12 +350,12 @@ export default function TechRepairs() {
                                   <Package size={20} />
                                 </div>
                                 <div>
-                                  <p className="text-slate-900 font-black text-sm">{part.itemName}</p>
-                                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Cant: {part.quantity} • Unit: ${part.price}</p>
+                                  <p className="text-slate-900 font-black text-sm">{part.inventory?.nombre_repuesto}</p>
+                                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Cant: {part.quantity} • Unit: ${Number(part.price_at_time || 0).toFixed(2)}</p>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-slate-900 font-black text-lg tracking-tighter">${part.total.toFixed(2)}</p>
+                                <p className="text-slate-900 font-black text-lg tracking-tighter">${(part.quantity * Number(part.price_at_time || 0)).toFixed(2)}</p>
                                 <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Procesado</p>
                               </div>
                             </div>
@@ -367,17 +381,13 @@ export default function TechRepairs() {
                             </div>
                             <h5 className="text-white font-black text-sm mb-4 truncate">{item.nombre_repuesto}</h5>
                             <div className="flex items-center justify-between">
-                              <span className="text-emerald-400 font-black text-lg tracking-tight">${item.costo_unitario}</span>
+                              <span className="text-emerald-400 font-black text-lg tracking-tight">${Number(item.costo_unitario).toFixed(2)}</span>
                               <div className="p-2 bg-blue-600 rounded-xl text-white opacity-0 group-hover/item:opacity-100 transition-all translate-x-4 group-hover/item:translate-x-0">
                                 <ArrowRight size={14} />
                               </div>
                             </div>
                           </button>
                         ))}
-                      </div>
-                      <div className="mt-6 pt-6 border-t border-white/5 flex justify-between items-center text-xs text-slate-500">
-                        <p className="font-medium italic">*Las solicitudes deben ser aprobadas por administración.</p>
-                        <button className="text-blue-400 font-black uppercase tracking-widest hover:text-blue-300">Ver Catálogo Completo</button>
                       </div>
                     </div>
                   </div>

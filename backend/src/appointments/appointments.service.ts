@@ -130,6 +130,30 @@ export class AppointmentsService {
     });
   }
 
+  async addMessage(appointmentId: number, userId: number, mensaje: string) {
+    await this.findOne(appointmentId);
+    return this.prisma.messages.create({
+      data: {
+        appointment_id: appointmentId,
+        sender_id: userId,
+        mensaje,
+      },
+      include: {
+        sender: { select: { id: true, nombre: true, role: true } },
+      },
+    });
+  }
+
+  async getMessages(appointmentId: number) {
+    return this.prisma.messages.findMany({
+      where: { appointment_id: appointmentId },
+      include: {
+        sender: { select: { id: true, nombre: true, role: true } },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+  }
+
   async remove(id: number) {
     await this.findOne(id);
     return this.prisma.appointments.delete({ where: { id } });
