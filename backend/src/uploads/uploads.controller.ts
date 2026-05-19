@@ -9,9 +9,15 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import sharp from 'sharp';
-import * as fs from 'fs';
-import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import streamifier from 'streamifier';
+
+// Configurar Cloudinary con las variables de entorno
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 @Controller('uploads')
 export class UploadsController {
@@ -38,32 +44,42 @@ export class UploadsController {
       throw new BadRequestException('No se ha proporcionado ningún archivo');
     }
 
-    const uploadDir = path.join(process.cwd(), 'uploads', 'parts');
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const filename = `${uuidv4()}.webp`;
-    const filepath = path.join(uploadDir, filename);
-
     try {
-      await sharp(file.buffer)
+      // 1. Optimizar la imagen con sharp en memoria
+      const buffer = await sharp(file.buffer)
         .resize({
           width: 1200,
           withoutEnlargement: true,
         })
         .webp({ quality: 80 })
-        .toFile(filepath);
+        .toBuffer();
 
+      // 2. Subir el buffer a Cloudinary usando un stream
+      const uploadResult = await new Promise<UploadApiResponse>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'jamechanic/parts',
+            format: 'webp',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            if (!result) return reject(new Error('No result from Cloudinary'));
+            resolve(result);
+          },
+        );
+
+        streamifier.createReadStream(buffer).pipe(uploadStream);
+      });
+
+      // 3. Retornar la URL segura (HTTPS) provista por Cloudinary
       return {
         message: 'Imagen subida y optimizada correctamente',
-        path: `/uploads/parts/${filename}`,
+        path: uploadResult.secure_url,
       };
     } catch (error) {
       console.error('Error al procesar la imagen:', error);
       throw new InternalServerErrorException(
-        'Ocurrió un error al procesar y guardar la imagen',
+        'Ocurrió un error al procesar y subir la imagen a la nube',
       );
     }
   }
